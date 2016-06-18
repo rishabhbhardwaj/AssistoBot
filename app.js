@@ -17,6 +17,7 @@ var
   express = require('express'),
   https = require('https'),
   async = require('async'),
+  fs = require('fs'),
   request = require('request');
 
 var app = express();
@@ -26,9 +27,22 @@ app.use(bodyParser.json({ verify: verifyRequestSignature }));
 app.use(express.static('public'));
 
 
+
 //Global
 
 var dest;
+
+var server = https.createServer({
+      ca: fs.readFileSync('./ssl/chain.pem'),
+      key: fs.readFileSync('./ssl/privkey.pem'),
+      cert: fs.readFileSync('./ssl/cert.pem'),
+      rejectUnauthorized: false
+    }, app);
+
+    // app.get('/', function (req, res) {
+    //   res.header('Content-type', 'text/html');
+    //   return res.end('<h1>Hello, Secure World!</h1>');
+    // });
 
 /*
  * Be sure to setup your config values before running this code. You can
@@ -555,7 +569,7 @@ function callSendAPI(messageData) {
 // Start server
 // Webhooks must be available via SSL with a certificate signed by a valid
 // certificate authority.
-app.listen(app.get('port'), function() {
+server.listen(app.get('port'), function() {
   console.log('Node app is running on port', app.get('port'));
 });
 
