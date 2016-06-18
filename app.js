@@ -17,8 +17,10 @@ app.use(bodyParser.json({ verify: verifyRequestSignature }));
 app.use(express.static('public'));
 
 var server = https.createServer({
-      key: fs.readFileSync('key.pem'),
-      cert: fs.readFileSync('cert.pem')
+      ca: fs.readFileSync('./ssl/chain.pem'),
+      key: fs.readFileSync('./ssl/privkey.pem'),
+      cert: fs.readFileSync('./ssl/cert.pem'),
+      rejectUnauthorized: false
     }, app);
 
     // app.get('/', function (req, res) {
