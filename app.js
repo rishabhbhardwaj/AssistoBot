@@ -222,7 +222,7 @@ function receivedMessage(event) {
 
   var msgArr = messageText.split(" ");
   dest = msgArr[msgArr.length - 1];
-
+  console.log("Dest "+dest);
   if(msgArr.length > 2 && msgArr[0] == 'time' && msgArr[2] == 'travel') {
     var info;
     var res;
@@ -251,15 +251,16 @@ function receivedMessage(event) {
                           headers: {
                             'content-type': 'application/json'
                           },
-                          method: 'POST'
+                          method: 'GET'
                         };
+          console.log(" lat "+location.lat+" long "+location.lng);
           console.log("calling API for time");
           request(options, function(err, response, body) {
             // JSON body
             if(err) { console.log(err); callback(true); return; }
             res = JSON.parse(body);
-            console.log("JSON response from time API"+res);
-            time = res.rows.elements.duration.text;
+            console.log("JSON response from time API"+JSON.stringify(res));
+            time = res.rows[0].elements[0].duration.text;
             callback(null, time);
           });
         }
