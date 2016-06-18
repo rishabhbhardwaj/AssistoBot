@@ -16,6 +16,7 @@ var
   crypto = require('crypto'),
   express = require('express'),
   https = require('https'),
+  async = require('async'),
   request = require('request');
 
 var app = express();
@@ -23,6 +24,11 @@ var app = express();
 app.set('port', process.env.PORT || 5000);
 app.use(bodyParser.json({ verify: verifyRequestSignature }));
 app.use(express.static('public'));
+
+
+//Global
+
+var dest;
 
 /*
  * Be sure to setup your config values before running this code. You can
@@ -200,6 +206,54 @@ function receivedMessage(event) {
   var messageText = message.text;
   var messageAttachments = message.attachments;
 
+  var msgArr = messageText.split(" ");
+  dest = msgArr[msgArr.length - 1];
+
+  if(msgArr.length > 2 && msgArr[0] == 'time' && msgArr[2] == 'travel') {
+    var info;
+    var res;
+    var time;
+    async.waterfall([
+        function(callback){
+          var options = {
+                          url: 'https://www.googleapis.com/geolocation/v1/geolocate?key=AIzaSyACwIEG9X_kyq0ub9Sza2sNci24xR26qJs',
+                          headers: {
+                            'content-type': 'application/json'
+                          }
+                        };
+          console.log("calling location");
+          request(options, function(err, response, body) {
+            // JSON body
+            if(err) { console.log(err);callback(true); return; }
+            info = JSON.parse(body);
+            console.log("Location JSON"+ info);
+            callback(null, info.location);
+          });
+        },
+        function(location, callback){
+          var options = {
+                          url: 'https://maps.googleapis.com/maps/api/distancematrix/json?units=imperial&origins=' + location.lat +',' + location.lng +'&destinations='+dest+'&key=AIzaSyDklmxFqTPRA-bVus-HcAmUUnMhtoGJtc8',
+                          headers: {
+                            'content-type': 'application/json'
+                          }
+                        };
+          console.log("calling API for time");
+          request(options, function(err, response, body) {
+            // JSON body
+            if(err) { console.log(err); callback(true); return; }
+            res = JSON.parse(body);
+            console.log("JSON response from time API"+res);
+            time = res.rows.elements.duration.text;
+            callback(null, time);
+          });
+        }
+      ],
+      function (err, result) {
+       if(err) { console.log(err); res.send(500,"Server Error"); return; }
+       console.log("Sending to Text Message "+senderID+dest+time);
+       sendTextMessage(senderID, 'Time to reach '+dest+' is '+time);
+      });
+  }
 
   if (messageText) {
 
