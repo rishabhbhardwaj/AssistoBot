@@ -233,7 +233,8 @@ function receivedMessage(event) {
                           url: 'https://www.googleapis.com/geolocation/v1/geolocate?key=AIzaSyACwIEG9X_kyq0ub9Sza2sNci24xR26qJs',
                           headers: {
                             'content-type': 'application/json'
-                          }
+                          },
+                          method: 'POST'
                         };
           console.log("calling location");
           request(options, function(err, response, body) {
@@ -249,7 +250,8 @@ function receivedMessage(event) {
                           url: 'https://maps.googleapis.com/maps/api/distancematrix/json?units=imperial&origins=' + location.lat +',' + location.lng +'&destinations='+dest+'&key=AIzaSyDklmxFqTPRA-bVus-HcAmUUnMhtoGJtc8',
                           headers: {
                             'content-type': 'application/json'
-                          }
+                          },
+                          method: 'POST'
                         };
           console.log("calling API for time");
           request(options, function(err, response, body) {
