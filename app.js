@@ -1,3 +1,12 @@
+/*
+ * Copyright 2016-present, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ */
+
 /* jshint node: true, devel: true */
 'use strict';
 
@@ -7,7 +16,6 @@ var
   crypto = require('crypto'),
   express = require('express'),
   https = require('https'),
-  fs = require("fs"),
   request = require('request');
 
 var app = express();
@@ -15,16 +23,6 @@ var app = express();
 app.set('port', process.env.PORT || 5000);
 app.use(bodyParser.json({ verify: verifyRequestSignature }));
 app.use(express.static('public'));
-
-var server = https.createServer({
-      key: fs.readFileSync('key.pem'),
-      cert: fs.readFileSync('cert.pem')
-    }, app);
-
-    // app.get('/', function (req, res) {
-    //   res.header('Content-type', 'text/html');
-    //   return res.end('<h1>Hello, Secure World!</h1>');
-    // });
 
 /*
  * Be sure to setup your config values before running this code. You can
@@ -503,7 +501,7 @@ function callSendAPI(messageData) {
 // Start server
 // Webhooks must be available via SSL with a certificate signed by a valid
 // certificate authority.
-server.listen(app.get('port'), function() {
+app.listen(app.get('port'), function() {
   console.log('Node app is running on port', app.get('port'));
 });
 
