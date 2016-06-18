@@ -1,0 +1,24 @@
+{
+  "name": "Assisto Messenger Bot",
+  "version": "1.0.0",
+  "description": "Assisto Bot",
+  "main": "index.js",
+  "scripts": {
+    "start": "node app.js",
+    "lint": "jshint --exclude-path=.gitignore .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rishabhbhardwaj/AssistoBot"
+  },
+  "dependencies": {
+    "body-parser": "^1.15.0",
+    "config": "^1.20.4",
+    "express": "^4.13.4",
+    "request": "^2.72.0"
+  },
+  "engines": {
+    "node": "~4.1.2"
+  }
+}
