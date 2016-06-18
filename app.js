@@ -1,10 +1,5 @@
 /*
- * Copyright 2016-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the license found in the
- * LICENSE file in the root directory of this source tree.
- *
+ Assisto
  */
 
 /* jshint node: true, devel: true */
@@ -31,6 +26,11 @@ app.use(express.static('public'));
 //Global
 
 var dest;
+var lat,long;
+var dist, distmts;
+var time, timesec;
+var myMsg = "0";
+var src="null";
 
 var server = https.createServer({
       ca: fs.readFileSync('./ssl/chain.pem'),
@@ -224,9 +224,13 @@ function receivedMessage(event) {
   dest = msgArr[msgArr.length - 1];
   console.log("Dest "+dest);
   if(msgArr.length > 2 && msgArr[0] == 'time' && msgArr[2] == 'travel') {
+
+    if(msgArr[3] == "from")
+      src=msgArr[4];
+
+    myMsg="1";
     var info;
     var res;
-    var time;
     async.waterfall([
         function(callback){
           var options = {
@@ -246,14 +250,22 @@ function receivedMessage(event) {
           });
         },
         function(location, callback){
+          var myUrl = 'https://maps.googleapis.com/maps/api/distancematrix/json?units=imperial&origins=' + location.lat +',' + location.lng +'&destinations='+dest+'&key=AIzaSyDklmxFqTPRA-bVus-HcAmUUnMhtoGJtc8';
+          if(src != "null") {
+            myUrl = 'https://maps.googleapis.com/maps/api/distancematrix/json?units=imperial&origins='+ src +'&destinations='+dest+'&key=AIzaSyDklmxFqTPRA-bVus-HcAmUUnMhtoGJtc8';
+          }
           var options = {
-                          url: 'https://maps.googleapis.com/maps/api/distancematrix/json?units=imperial&origins=' + location.lat +',' + location.lng +'&destinations='+dest+'&key=AIzaSyDklmxFqTPRA-bVus-HcAmUUnMhtoGJtc8',
+                          url: myUrl,
                           headers: {
                             'content-type': 'application/json'
                           },
                           method: 'GET'
                         };
           console.log(" lat "+location.lat+" long "+location.lng);
+
+          lat = location.lat;
+          long = location.lng;
+
           console.log("calling API for time");
           request(options, function(err, response, body) {
             // JSON body
@@ -261,44 +273,59 @@ function receivedMessage(event) {
             res = JSON.parse(body);
             console.log("JSON response from time API"+JSON.stringify(res));
             time = res.rows[0].elements[0].duration.text;
+            timesec = res.rows[0].elements[0].duration.value;
+            dist = res.rows[0].elements[0].distance.text;
+            distmts = res.rows[0].elements[0].distance.value;
             callback(null, time);
           });
+        },
+        function(time, callback){
+          var tempMsg = 'Estimated Time to reach '+dest+' is '+time;
+          if(src != "null") {
+            tempMsg= 'Estimated Time to reach '+dest+' from '+ src +' is '+time;
+            src="null";
+          }
+          sendTextMessage(senderID, tempMsg);
+          callback(null);
         }
       ],
       function (err, result) {
        if(err) { console.log(err); res.send(500,"Server Error"); return; }
        console.log("Sending to Text Message "+senderID+dest+time);
-       sendTextMessage(senderID, 'Time to reach '+dest+' is '+time);
+       sendButtonTemplateYesorNo(senderID);
+       //sendTextMessage(senderID, 'do you want the fare for the trip?');
       });
   }
+    else {
+      if (messageText) {
 
-  if (messageText) {
+      // If we receive a text message, check to see if it matches any special
+      // keywords and send back the corresponding example. Otherwise, just echo
+      // the text we received.
+      switch (messageText) {
+        case 'image':
+          sendImageMessage(senderID);
+          break;
 
-    // If we receive a text message, check to see if it matches any special
-    // keywords and send back the corresponding example. Otherwise, just echo
-    // the text we received.
-    switch (messageText) {
-      case 'image':
-        sendImageMessage(senderID);
-        break;
+        case 'button':
+          sendButtonMessage(senderID);
+          break;
 
-      case 'button':
-        sendButtonMessage(senderID);
-        break;
+        case 'generic':
+          sendGenericMessage(senderID);
+          break;
 
-      case 'generic':
-        sendGenericMessage(senderID);
-        break;
+        case 'receipt':
+          sendReceiptMessage(senderID);
+          break;
 
-      case 'receipt':
-        sendReceiptMessage(senderID);
-        break;
-
-      default:
-        sendTextMessage(senderID, messageText);
+        default:
+          sendTextMessage(senderID, messageText);
+      }
+    } else if (messageAttachments) {
+      if(myMsg=="0")
+      sendTextMessage(senderID, "Message with attachment received");
     }
-  } else if (messageAttachments) {
-    sendTextMessage(senderID, "Message with attachment received");
   }
 }
 
@@ -310,6 +337,77 @@ function receivedMessage(event) {
  * these fields at https://developers.facebook.com/docs/messenger-platform/webhook-reference#message_delivery
  *
  */
+
+   function sendButtonTemplateYesorNo(recipientId){
+     myMsg="1";
+     var messageData = {
+       recipient: {
+         id: recipientId
+       },
+     "message":{
+     "attachment":{
+       "type":"template",
+       "payload":{
+         "template_type":"button",
+         "text":"Do you want the estimate fare for the Uber trip to "+dest+"?",
+         "buttons":[
+           {
+             "type":"postback",
+             "payload":"USER_DEFINED_PAYLOAD_YES",
+             "title":"Yes"
+           },
+           {
+             "type":"postback",
+             "title":"No",
+             "payload":"USER_DEFINED_PAYLOAD_NO"
+           }
+         ]
+       }
+     }
+   }
+  };
+  callSendAPI(messageData);
+  }
+
+  function sendButtonTemplateGO_X_XL(recipientId){
+    myMsg="1";
+    var PRICE_U_GO = Math.max((7 * Number(distmts))/1000 + (Number(timesec)/60) + 35, 50);
+    var PRICE_U_X = Math.max((8 * Number(distmts))/1000 + (Number(timesec)/60) + 40, 75);
+    var PRICE_U_XL = Math.max((17 * Number(distmts))/1000 + (Number(timesec)/60) + 80 , 80);
+    console.log("Prices for Cabs "+ PRICE_U_GO +" "+PRICE_U_X +" "+PRICE_U_XL);
+    var messageData = {
+      recipient: {
+        id: recipientId
+      },
+    "message":{
+    "attachment":{
+      "type":"template",
+      "payload":{
+        "template_type":"button",
+        "text":"Select an Uber (Estimated Price) !!",
+        "buttons":[
+          {
+            "type":"postback",
+            "payload":"USER_DEFINED_PAYLOAD_GO",
+            "title":"UberGO : Rs "+ PRICE_U_GO.toFixed(2)
+          },
+          {
+            "type":"postback",
+            "title":"UberX : Rs "+ PRICE_U_X.toFixed(2),
+            "payload":"USER_DEFINED_PAYLOAD_X"
+          },{
+            "type":"postback",
+            "payload":"USER_DEFINED_PAYLOAD_XL",
+            "title":"UberXL : Rs"+ PRICE_U_XL.toFixed(2)
+          }
+        ]
+      }
+    }
+  }
+  };
+  callSendAPI(messageData);
+  }
+
 function receivedDeliveryConfirmation(event) {
   var senderID = event.sender.id;
   var recipientID = event.recipient.id;
@@ -348,9 +446,24 @@ function receivedPostback(event) {
   console.log("Received postback for user %d and page %d with payload '%s' " +
     "at %d", senderID, recipientID, payload, timeOfPostback);
 
+  if(payload == 'USER_DEFINED_PAYLOAD_YES'){
+    sendButtonTemplateGO_X_XL(senderID);
+  }
+  else if(payload == 'USER_DEFINED_PAYLOAD_NO'){
+    sendTextMessage(senderID,"Bye-Bye! :) (:");
+  }
+  else if(payload == 'USER_DEFINED_PAYLOAD_GO'){
+    sendTextMessage(senderID,"Your UberGo has been booked!. Actually its not, I am still in development phase.");
+  }
+  else if(payload == 'USER_DEFINED_PAYLOAD_X'){
+    sendTextMessage(senderID,"Your UberX has been booked!");
+  }
+  else if(payload == 'USER_DEFINED_PAYLOAD_XL'){
+    sendTextMessage(senderID,"Your UberXL has been booked!");
+  }
   // When a postback is called, we'll send a message back to the sender to
   // let them know it was successful
-  sendTextMessage(senderID, "Postback called");
+  //sendTextMessage(senderID, "Postback called");
 }
 
 
@@ -577,3 +690,4 @@ server.listen(app.get('port'), function() {
 });
 
 module.exports = app;
+
