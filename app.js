@@ -217,7 +217,7 @@ function receivedMessage(event) {
   var messageId = message.mid;
 
   // You may get a text or attachment but not both
-  var messageText = message.text;
+  var messageText = message.text.toLowerCase();
   var messageAttachments = message.attachments;
 
   var msgArr = messageText.split(" ");
@@ -690,4 +690,3 @@ server.listen(app.get('port'), function() {
 });
 
 module.exports = app;
-
