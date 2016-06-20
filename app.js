@@ -215,15 +215,25 @@ function receivedMessage(event) {
   console.log(JSON.stringify(message));
 
   var messageId = message.mid;
-
+  var msgType ;
+  if(message.hasOwnProperty('attachments'))
+  msgType =  message.attachments[0].type;
+  else
+   msgType = 'text';
   // You may get a text or attachment but not both
-  var messageText = message.text.toLowerCase();
+  var messageText =  message.text;
+  if(msgType != 'image') {
+	console.log("Message Type "+ msgType +" ; Message Text "+ messageText) ; 
+       messageText = message.text.toLowerCase();
+ }
   var messageAttachments = message.attachments;
-
-  var msgArr = messageText.split(" ");
+  var msgArr;
+  if(msgType!='image') { 
+  msgArr = messageText.split(" ");
   dest = msgArr[msgArr.length - 1];
   console.log("Dest "+dest);
-  if(msgArr.length > 2 && msgArr[0] == 'time' && msgArr[2] == 'travel') {
+ }
+  if( msgType!='image' && msgArr.length > 2 && msgArr[0] == 'time' && msgArr[2] == 'travel') {
 
     if(msgArr[3] == "from")
       src=msgArr[4];
@@ -295,7 +305,7 @@ function receivedMessage(event) {
        sendButtonTemplateYesorNo(senderID);
        //sendTextMessage(senderID, 'do you want the fare for the trip?');
       });
-  }
+  } 
     else {
       if (messageText) {
 
